@@ -14,8 +14,10 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import configparser
 import time
 import requests
+import os.path
 
 BASE_URL = "https://api.pushover.net/1/"
 MESSAGE_URL = BASE_URL + "messages.json"
@@ -23,6 +25,8 @@ USER_URL = BASE_URL + "users/validate.json"
 SOUND_URL = BASE_URL + "sounds.json"
 RECEIPT_URL = BASE_URL + "receipts/"
 GLANCE_URL = BASE_URL + "glances.json"
+
+CONFIG_PATH = '~/.pushoverrc'
 
 
 class RequestError(Exception):
@@ -39,7 +43,7 @@ class RequestError(Exception):
         return "\n==> " + "\n==> ".join(self.errors)
 
 
-class Request(object):
+class Request:
     """Base class to send a request to the Pushover server and check the return
     status code. The request is sent on instantiation and raises
     a :class:`RequestError` exception when the request is rejected.
@@ -132,7 +136,7 @@ class MessageRequest(Request):
             return None
 
 
-class Pushover(object):
+class Pushover:
     """This is the main class of the module. It represents a Pushover app and
     is tied to a unique API token.
 
@@ -201,7 +205,7 @@ class Pushover(object):
         """
 
         payload = {"message": message, "user": user, "token": self.token}
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             if key not in Pushover.message_keywords:
                 raise ValueError("{0}: invalid message parameter".format(key))
             elif key == "timestamp" and value is True:
@@ -232,3 +236,28 @@ class Pushover(object):
                 payload[key] = value
 
         return Request("post", GLANCE_URL, payload)
+
+class Client:
+	def __init__(self, user_key=None, api_token=None):
+		if user_key is None or api_token is None:
+			self.params = self.read_config(CONFIG_PATH)
+		else:
+			self.params = {"user_key": user_key, "api_key": api_key}
+
+	@staticmethod
+	def read_config(config_path):
+		config_path = os.path.expanduser(config_path)
+
+		config = configparser.RawConfigParser()
+		files = config.read(config_path)
+		if not files:
+			return {}
+		params = {}
+		params["user_key"] = config.get("Default", "user_key")
+		params["api_token"] = config.get("Default", "api_token")
+
+		return params
+
+	def send_message(self, message, title=None):
+		Pushover(self.params['api_token']).message(self.params['user_key'], message, title=title)
+
