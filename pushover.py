@@ -242,7 +242,7 @@ class Client:
 		if user_key is None or api_token is None:
 			self.params = self.read_config(CONFIG_PATH)
 		else:
-			self.params = {"user_key": user_key, "api_key": api_key}
+			self.params = {"user_key": user_key, "api_token": api_token}
 
 	@staticmethod
 	def read_config(config_path):
